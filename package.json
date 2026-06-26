@@ -1,0 +1,14 @@
+{
+  "name": "goshippo-history",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Wayback Machine homepage timeline of goshippo.com + the capture tool that builds it.",
+  "scripts": {
+    "capture": "node capture.mjs",
+    "build-site": "node build-site.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.61.1"
+  }
+}
