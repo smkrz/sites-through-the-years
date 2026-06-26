@@ -7,16 +7,27 @@ const ONLY = new Set((process.env.ONLY || '').split(',').map(s => s.trim()).filt
 const GOTO = process.env.GOTO ? parseInt(process.env.GOTO, 10) : 90000;                 // per-nav timeout
 const DEADLINE = process.env.DEADLINE ? Date.now() + parseInt(process.env.DEADLINE, 10) : Infinity; // wall-clock budget
 const GAP_MS = 3500;
+// Politeness knobs. Each archived page pulls dozens of sub-resources; firing them as
+// one burst saturates the Wayback load balancer's backend queue, which then sheds load
+// with "503 No server is available" (HAProxy) -> broken hero/logo images. We cap the
+// number of in-flight archive requests and space their starts to keep bursts small.
+const MAX_CONC = process.env.MAX_CONC ? parseInt(process.env.MAX_CONC, 10) : 5;          // max concurrent archive requests
+const REQ_SPACING_MS = process.env.REQ_SPACING_MS ? parseInt(process.env.REQ_SPACING_MS, 10) : 120; // min gap between request starts
+// Identify the client (IA treats identified, rate-limited clients better than anonymous scrapers).
+const UA = 'goshippo-history-archiver/1.0 (+https://github.com/smkrz/shippo-website-history-snapshots)';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+const jitter = ms => ms + Math.floor(Math.random() * Math.min(1000, ms * 0.25));         // de-synchronize retries
 
 async function cdxJson(url, attempts = 8) {
   for (let i = 1; i <= attempts; i++) {
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: { 'User-Agent': UA } });
       const text = await res.text();
       if (res.ok && text.trim().startsWith('[')) return JSON.parse(text);
+      // On 429, IA bans the IP for 1h (doubling) if ignored >1min -> pause ~60s, don't hammer.
+      if (res.status === 429) { await sleep(60000); continue; }
     } catch {}
-    await sleep(2500 * i);
+    await sleep(jitter(2500 * i));
   }
   throw new Error('CDX failed: ' + url);
 }
@@ -66,7 +77,39 @@ const browser = await chromium.launch();
 const ctx = await browser.newContext({
   viewport: { width: 1440, height: 900 },
   deviceScaleFactor: 2,
+  userAgent: UA,
 });
+
+// --- request governor: meter the START of native requests so we never fire a big burst
+//     at the Wayback LB. We do NOT replay requests (route.fetch breaks loads); we only delay
+//     when the browser is allowed to issue each one, then let it fetch natively. ---
+let active = 0, lastStart = 0;
+const waiters = [];
+async function acquireSlot() {
+  if (active >= MAX_CONC) await new Promise(r => waiters.push(r));
+  active++;
+  const wait = REQ_SPACING_MS - (Date.now() - lastStart);
+  if (wait > 0) await sleep(wait);
+  lastStart = Date.now();
+}
+function releaseSlot() { active--; const next = waiters.shift(); if (next) next(); }
+
+// analytics/tracking/social beacons don't affect the screenshot — dropping them shrinks the burst
+const BLOCK = /google-analytics|googletagmanager|doubleclick|facebook\.|fbcdn|hotjar|segment\.|mixpanel|intercom|drift\.|fullstory|optimizely|amplitude|sentry|heapanalytics|stats\.g|clarity\.ms/i;
+
+// Governor is opt-in (GOVERN=1). Default behaviour lets the browser fetch natively (proven).
+// When on, it drops tracking noise and meters the START of native requests (never replays
+// them) to keep per-page bursts small — gentler on the Wayback LB during busy periods.
+if (process.env.GOVERN === '1') {
+  await ctx.route('**/*', async (route) => {
+    const url = route.request().url();
+    if (BLOCK.test(url)) return route.abort().catch(() => {});
+    if (url.startsWith('data:') || url.startsWith('blob:')) return route.continue().catch(() => {});
+    await acquireSlot();
+    setTimeout(releaseSlot, 300);   // hold the slot briefly to space starts, then fetch natively
+    return route.continue().catch(() => {});
+  });
+}
 
 // Load one timestamp and report quality. Throws on archive error / unstyled.
 // Returns {broken} = count of <img> that failed to load (proxy for throttled assets,
@@ -123,8 +166,11 @@ for (const p of selected) {
         }
         break; // styled render obtained for this candidate; move on (or stop if clean)
       } catch (e) {
-        const backoff = [4000, 10000, 20000][attempt - 1];
-        console.log(`  ${p.date} ts=${ts} try ${attempt}/3: ${e.message} -> ${backoff / 1000}s`);
+        // A real 429 means back off hard (60s) to avoid IA's escalating IP ban; 503/overload
+        // and timeouts are transient backend-capacity issues -> shorter graded backoff.
+        const is429 = /\b429\b|Too Many/i.test(e.message);
+        const backoff = is429 ? 60000 : jitter([4000, 10000, 20000][attempt - 1]);
+        console.log(`  ${p.date} ts=${ts} try ${attempt}/3: ${e.message} -> ${Math.round(backoff / 1000)}s`);
         await sleep(backoff);
       } finally {
         await page.close();
