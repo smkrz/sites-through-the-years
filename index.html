@@ -15,12 +15,11 @@
   header h1 .accent { color:var(--accent); }
 
   main { max-width:1200px; margin:0 auto; padding:22px 24px 60px; }
-  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:20px;
-    justify-content:center; }
+  .grid { display:flex; flex-wrap:wrap; justify-content:center; gap:20px; }
 
-  .card { display:block; text-decoration:none; color:inherit; background:var(--panel);
-    border:1px solid var(--line); border-radius:12px; overflow:hidden; transition:border-color .15s, transform .15s; }
-  .card:hover { border-color:var(--card-accent, var(--muted)); transform:translateY(-3px); }
+  .card { display:block; width:min(340px, 100%); text-decoration:none; color:inherit; background:var(--panel);
+    border:1px solid var(--line); border-radius:12px; overflow:hidden; transition:border-color .15s; }
+  .card:hover { border-color:var(--card-accent, var(--muted)); }
   .cover { position:relative; aspect-ratio:16/10; background:#0a0d12; overflow:hidden;
     border-bottom:1px solid var(--line); }
   .cover img { width:100%; height:100%; object-fit:cover; object-position:top center; display:block; }
@@ -31,8 +30,6 @@
     padding:4px 10px; font-size:11px; color:var(--txt); font-variant-numeric:tabular-nums; }
 
   .meta { padding:16px 16px 18px; text-align:center; }
-  .meta .name-row { display:flex; align-items:center; justify-content:center; gap:9px; }
-  .dot { width:10px; height:10px; border-radius:50%; background:var(--card-accent,var(--accent)); flex:none; }
   .meta .name { font-size:20px; font-weight:650; }
   .meta .domain { font-size:12px; color:var(--muted); margin-top:6px; }
 
@@ -69,7 +66,7 @@ function card(site, data){
     : '<div class="cover"><div class="skeleton">no snapshots yet</div></div>';
   a.innerHTML = cover +
     '<div class="meta">' +
-      '<div class="name-row"><span class="dot"></span><span class="name">'+(site.name||site.key)+'</span></div>' +
+      '<div class="name">'+(site.name||site.key)+'</div>' +
       '<div class="domain">'+site.domain+'</div>' +
     '</div>';
   return a;
