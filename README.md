@@ -73,20 +73,34 @@ existing shot if it's genuinely clean, so a throttled re-try can improve or keep
 never make it worse (verdicts: `ok` clean · `WARN` saved best, no prior shot · `KEEP` kept the
 existing shot · `skip` untouched).
 
-### Throttling & IP rotation
+### Throttling & unattended runs
 
-The Internet Archive rate-limits **per source IP** with an *escalating* penalty — grinding
-through 503s graduates to a hard ~1-hour ban. The capturer detects sustained throttling (a broad
-run of picks hitting 503/429, distinct from one archive-degraded date) and **proactively pauses
-on an escalating ladder** (5 → 15 → 30 → 60 min) rather than hammering or quitting. It never
-exits — it can idle for hours/days and resumes the moment the archive is reachable — and while
-paused it prints an **IP-rotation recommendation**: switching your VPN/IP resets the per-IP limit
-instantly and the run continues on the new address. Residential exits beat datacenter/VPN-farm
-ones (IA pre-blocks some ranges).
+The Internet Archive rate-limits **per source IP** with an *escalating* penalty — bursting
+through 503s graduates to a hard ~1-hour ban. Two mechanisms keep the capturer robust:
+
+- **Adaptive rate control (AIMD):** concurrency starts at 1, ramps *up* while responses stay
+  clean, and *halves* the instant a 503/429 appears (honoring the `Retry-After` header). It
+  converges on the fastest rate IA tolerates and holds there — so it rarely trips the limit
+  instead of guessing a fixed concurrency.
+- **Escalating cooldowns:** if throttling still becomes sustained (a broad run of picks hitting
+  503/429, distinct from one archive-degraded date) it proactively pauses on a 5 → 15 → 30 → 60 min
+  ladder, probing liveness between pauses. It never exits; it resumes the moment IA is reachable.
+
+For a truly hands-off, multi-day run, use the supervisor — it relaunches on crash/reboot,
+resumes via `SKIP_EXISTING`, and stops once a full pass adds nothing new:
+
+```bash
+./run.sh stripe        # supervised, unattended; Ctrl-C to stop
+```
+
+Note: rotating a **datacenter** VPN (e.g. NordVPN) among its exits often doesn't help — IA
+throttles those ranges broadly; residential exits fare better. The adaptive controller is the
+more reliable lever than IP-hopping.
 
 Useful env knobs: `LIMIT` (cap picks), `ONLY` (comma-separated dates), `DEADLINE` (ms
-wall-clock budget), `GOTO` (per-nav timeout), `MAX_CONC` / `REQ_SPACING_MS` (request governor),
-`EMPTY_MAX` (layout-collapse threshold), `THROTTLE_NUDGE` / `THROTTLE_COOLDOWNS` (throttle
-governor: consecutive throttled picks before pausing, and the cooldown ladder in seconds).
+wall-clock budget), `GOTO` (per-nav timeout), `MAX_CONC` (adaptive concurrency ceiling) /
+`RAMP_AFTER` (clean responses per +1 concurrency) / `REQ_SPACING_MS` (min request spacing),
+`GOVERN=0` (disable the governor), `EMPTY_MAX` (layout-collapse threshold),
+`THROTTLE_NUDGE` / `THROTTLE_COOLDOWNS` (cooldown trigger and ladder in seconds).
 
 Source: <https://web.archive.org/>

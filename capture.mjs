@@ -100,27 +100,56 @@ const ctx = await browser.newContext({
   userAgent: UA,
 });
 
-// --- request governor: meter the START of native requests so we never fire a big burst
-//     at the Wayback LB. We do NOT replay requests (route.fetch breaks loads); we only delay
-//     when the browser is allowed to issue each one, then let it fetch natively. ---
-let active = 0, lastStart = 0;
-const waiters = [];
+// --- adaptive request controller (AIMD) ---------------------------------------------------
+// IA rate-limits per IP; a fixed concurrency either bursts (-> throttle) or crawls (-> slow).
+// Instead we auto-tune: ramp concurrency UP while responses stay clean, HALVE it on any
+// 503/429, and honor the Retry-After header. It converges on the fastest rate the Archive
+// tolerates and holds there — no bursts, no guessing MAX_CONC. We meter request STARTS only
+// (never replay via route.fetch — that breaks Wayback loads).
+const RAMP_AFTER = process.env.RAMP_AFTER ? parseInt(process.env.RAMP_AFTER, 10) : 25; // clean responses per +1 concurrency
+const rate = {
+  conc: 1,                 // current concurrency limit (starts gentle, adapts up)
+  active: 0, lastStart: 0, waiters: [],
+  clean: 0, pauseUntil: 0, // pauseUntil: global gate honoring Retry-After
+  observe(status, retryAfter) {
+    if (status === 503 || status === 429) {                 // multiplicative decrease
+      const before = this.conc;
+      this.conc = Math.max(1, Math.floor(this.conc / 2));
+      this.clean = 0;
+      const ra = parseInt(retryAfter, 10);
+      const backoff = Number.isFinite(ra) && ra > 0 ? Math.min(ra, 300) * 1000 : 5000; // honor Retry-After (cap 5m)
+      this.pauseUntil = Math.max(this.pauseUntil, Date.now() + backoff);
+      if (before !== this.conc) console.log(`[rate] ${status} -> concurrency ${before}->${this.conc}, pause ${Math.round(backoff / 1000)}s`);
+    } else if (status >= 200 && status < 400) {             // additive increase
+      if (++this.clean >= RAMP_AFTER && this.conc < MAX_CONC) {
+        this.conc++; this.clean = 0;
+        console.log(`[rate] steady -> concurrency ${this.conc - 1}->${this.conc}`);
+      }
+    }
+  },
+};
 async function acquireSlot() {
-  if (active >= MAX_CONC) await new Promise(r => waiters.push(r));
-  active++;
-  const wait = REQ_SPACING_MS - (Date.now() - lastStart);
+  for (;;) {
+    const now = Date.now();
+    if (now < rate.pauseUntil) { await sleep(rate.pauseUntil - now); continue; }
+    if (rate.active < rate.conc) break;
+    await new Promise(r => rate.waiters.push(r));
+  }
+  rate.active++;
+  const wait = REQ_SPACING_MS - (Date.now() - rate.lastStart);
   if (wait > 0) await sleep(wait);
-  lastStart = Date.now();
+  rate.lastStart = Date.now();
 }
-function releaseSlot() { active--; const next = waiters.shift(); if (next) next(); }
+function releaseSlot() { rate.active--; const next = rate.waiters.shift(); if (next) next(); }
+// Feed every browser response into the controller so it can adapt (attached per page in the loop).
+const feedRate = (page) => page.on('response', (r) => { try { rate.observe(r.status(), r.headers()['retry-after']); } catch {} });
 
 // analytics/tracking/social beacons don't affect the screenshot — dropping them shrinks the burst
 const BLOCK = /google-analytics|googletagmanager|doubleclick|facebook\.|fbcdn|hotjar|segment\.|mixpanel|intercom|drift\.|fullstory|optimizely|amplitude|sentry|heapanalytics|stats\.g|clarity\.ms/i;
 
-// Governor is opt-in (GOVERN=1). Default behaviour lets the browser fetch natively (proven).
-// When on, it drops tracking noise and meters the START of native requests (never replays
-// them) to keep per-page bursts small — gentler on the Wayback LB during busy periods.
-if (process.env.GOVERN === '1') {
+// Governor on by default (disable with GOVERN=0). Drops tracking noise and meters the START of
+// native requests under the adaptive controller — never replays them.
+if (process.env.GOVERN !== '0') {
   await ctx.route('**/*', async (route) => {
     const url = route.request().url();
     if (BLOCK.test(url)) return route.abort().catch(() => {});
@@ -316,6 +345,7 @@ for (const p of selected) {
     if (best && best.clean) break;
     for (let attempt = 1; attempt <= 3; attempt++) {
       const page = await ctx.newPage();
+      feedRate(page);   // feed responses to the adaptive rate controller
       try {
         const q = await probe(page, ts);
         throttle.note(q.throttle503 > 0);
