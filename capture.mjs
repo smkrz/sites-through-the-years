@@ -31,7 +31,7 @@ const GAP_MS = 3500;
 const MAX_CONC = process.env.MAX_CONC ? parseInt(process.env.MAX_CONC, 10) : 5;          // max concurrent archive requests
 const REQ_SPACING_MS = process.env.REQ_SPACING_MS ? parseInt(process.env.REQ_SPACING_MS, 10) : 120; // min gap between request starts
 // Identify the client (IA treats identified, rate-limited clients better than anonymous scrapers).
-const UA = 'website-history-archiver/1.0 (+https://github.com/smkrz/shippo-website-history-snapshots)';
+const UA = 'website-history-archiver/1.0 (+https://github.com/smkrz/sites-through-the-years)';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const jitter = ms => ms + Math.floor(Math.random() * Math.min(1000, ms * 0.25));         // de-synchronize retries
 
