@@ -10,13 +10,13 @@
   html,body { margin:0; min-height:100%; background:var(--bg); color:var(--txt);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
 
-  header { padding:34px 24px 8px; max-width:1200px; margin:0 auto; }
-  header h1 { font-size:26px; font-weight:700; margin:0 0 6px; letter-spacing:.2px; }
+  header { padding:34px 24px 8px; max-width:1200px; margin:0 auto; text-align:center; }
+  header h1 { font-size:26px; font-weight:700; margin:0; letter-spacing:.2px; }
   header h1 .accent { color:var(--accent); }
-  header p { font-size:14px; color:var(--muted); margin:0; max-width:640px; line-height:1.5; }
 
   main { max-width:1200px; margin:0 auto; padding:22px 24px 60px; }
-  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:20px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:20px;
+    justify-content:center; }
 
   .card { display:block; text-decoration:none; color:inherit; background:var(--panel);
     border:1px solid var(--line); border-radius:12px; overflow:hidden; transition:border-color .15s, transform .15s; }
@@ -30,24 +30,20 @@
     backdrop-filter:blur(6px); border:1px solid var(--line); border-radius:999px;
     padding:4px 10px; font-size:11px; color:var(--txt); font-variant-numeric:tabular-nums; }
 
-  .meta { padding:14px 16px 16px; }
-  .meta .row { display:flex; align-items:baseline; gap:8px; }
-  .dot { width:9px; height:9px; border-radius:50%; background:var(--card-accent,var(--accent)); flex:none;
-    align-self:center; }
-  .meta .name { font-size:16px; font-weight:650; }
-  .meta .domain { font-size:12px; color:var(--muted); margin-left:auto; }
-  .meta .span { font-size:12px; color:var(--muted); margin-top:7px; font-variant-numeric:tabular-nums; }
-  .meta .note { font-size:12px; color:var(--muted); margin-top:8px; line-height:1.45; }
+  .meta { padding:16px 16px 18px; text-align:center; }
+  .meta .name-row { display:flex; align-items:center; justify-content:center; gap:9px; }
+  .dot { width:10px; height:10px; border-radius:50%; background:var(--card-accent,var(--accent)); flex:none; }
+  .meta .name { font-size:20px; font-weight:650; }
+  .meta .domain { font-size:12px; color:var(--muted); margin-top:6px; }
 
-  footer { max-width:1200px; margin:0 auto; padding:0 24px 40px; color:var(--muted); font-size:12px; }
+  footer { max-width:1200px; margin:0 auto; padding:0 24px 40px; color:var(--muted); font-size:12px;
+    text-align:center; }
   footer a { color:var(--muted); }
 </style>
 </head>
 <body>
   <header>
     <h1>Website history <span class="accent">through the years</span></h1>
-    <p>Homepages of companies as captured by the Internet Archive Wayback Machine — one
-       representative snapshot per quarter, from the earliest capture to today.</p>
   </header>
   <main>
     <div class="grid" id="grid"></div>
@@ -57,15 +53,11 @@
   </footer>
 
 <script>
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const grid = document.getElementById('grid');
-
-function fmt(d){ const [y,m,day]=d.split('-'); return MONTHS[parseInt(m)-1]+' '+parseInt(day)+', '+y; }
 
 function card(site, data){
   const shots = (data && data.shots) || [];
   const latest = shots[shots.length-1];
-  const earliest = shots[0];
   const accent = site.accent || (data && data.accent) || '#22c55e';
   const a = document.createElement('a');
   a.className = 'card';
@@ -75,15 +67,10 @@ function card(site, data){
     ? '<div class="cover"><img loading="lazy" src="sites/'+site.key+'/shots/'+latest+'.png" alt="'+site.domain+' latest homepage">'
       + '<span class="pill">'+shots.length+' snapshots</span></div>'
     : '<div class="cover"><div class="skeleton">no snapshots yet</div></div>';
-  const range = (earliest && latest)
-    ? fmt(earliest)+'  →  '+fmt(latest)
-    : '—';
   a.innerHTML = cover +
     '<div class="meta">' +
-      '<div class="row"><span class="dot"></span><span class="name">'+(site.name||site.key)+'</span>' +
-      '<span class="domain">'+site.domain+'</span></div>' +
-      '<div class="span">'+range+'</div>' +
-      (site.note ? '<div class="note">'+site.note+'</div>' : '') +
+      '<div class="name-row"><span class="dot"></span><span class="name">'+(site.name||site.key)+'</span></div>' +
+      '<div class="domain">'+site.domain+'</div>' +
     '</div>';
   return a;
 }
