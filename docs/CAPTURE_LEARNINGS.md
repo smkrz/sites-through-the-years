@@ -70,6 +70,19 @@ Two signals decide if a render is "clean":
   bug that started this whole saga.)
 - **`emptyRatio`** — sample a grid over the above-the-fold with `elementFromPoint`; cells hitting
   only `<body>`/background = layout collapse (content jammed into a narrow column, white void).
+- **`blank`** — `sharp(png).stats()` after the screenshot: a near-uniform image (max channel
+  stdev `< 6`) is an all-white void. Catches the class `emptyRatio` **misses** — a page that
+  "loaded" but painted nothing still has invisible/whitespace nodes under every `elementFromPoint`
+  sample, so it scores `emptyRatio=0` yet is blank. (Found the hard way: an all-white 12 KB shot
+  that the old detector saved as `clean=true`.)
+- **`unstyled`** — when the site's own layout CSS returns HTTP **200 but doesn't apply** (throttled
+  `@import` / JS-injected stylesheet), the page falls back to browser defaults: **serif body font
+  + default-blue `rgb(0,0,238)` underlined links**, giant unconstrained logo, bullet-list nav.
+  `cssFailed` can't see it (the sheet was 200, not ≥400) and `emptyRatio` can't (unstyled text
+  still fills the fold). Detect the fallback *signature* in-page via `getComputedStyle`. This is a
+  distinct failure from the throttle-induced half-styled render — same date can render unstyled on
+  one candidate and fully styled on the next, so it must feed candidate **selection**, not just the
+  final verdict. Both `blank` and `unstyled` dominate `scoreOf` so any genuinely styled candidate wins.
 - **CAVEAT (important):** these are *conservative*. `css=8` often looks visually perfect — the
   failed assets were non-critical (tracking JS, off-screen lazy images, a font that fell back).
   Use the score to **rank candidates**, not as a verdict that a render is unusable. Verify
@@ -148,6 +161,15 @@ Two signals decide if a render is "clean":
 7. **Treated every "non-clean" (metric) render as broken.** → Most look fine; eyeball first.
 8. **Used `pkill -f "node capture.mjs"`** which also killed the *monitor* (its script contains that
    string). → Match the exact process (`ps -o comm= == node`) or a unique token.
+9. **Awaited `document.fonts.ready` with no timeout.** Under heavy throttle a font sub-resource
+   stays pending forever, the promise never settles, and the whole probe hangs *silently* (no log,
+   no error, CPU busy) — looks identical to "slow." One heavy modern page stalled the run for
+   >8 min this way. → `Promise.race` it against a short cap (4 s). Fonts are cosmetic to the shot.
+10. **`f.slice(0, -4)` to strip the extension** — correct for `.png` (4 chars), silently wrong after
+    the WebP migration (`.webp` is 5), leaving a trailing dot in `snapshots.json` `shots` (e.g.
+    `"2024-01-01."`) so the viewer built `…/2024-01-01..webp` and every image 404'd. → Strip by
+    pattern (`f.replace(/\.webp$/, '')`), never a fixed slice. Re-check derived name lists after any
+    extension change.
 
 ---
 

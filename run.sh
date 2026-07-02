@@ -13,7 +13,7 @@ SITE="${1:-${SITE:-stripe}}"
 DIR="sites/$SITE/shots"
 LOG="capture-$SITE.log"
 
-count() { ls "$DIR"/*.png 2>/dev/null | grep -v '\.tmp-' | wc -l | tr -d ' '; }
+count() { ls "$DIR"/*.webp 2>/dev/null | grep -v '\.tmp-' | wc -l | tr -d ' '; }
 
 echo "[supervisor] $(date '+%F %T') starting for $SITE — logging to $LOG"
 while true; do

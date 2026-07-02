@@ -208,7 +208,14 @@ async function probe(page, ts) {
         }, 80);
       });
     });
-    await page.evaluate(() => (document.fonts ? document.fonts.ready : null)).catch(() => {});
+    // Cap the fonts.ready wait: under heavy archive throttling a font sub-resource can stay
+    // pending indefinitely and document.fonts.ready then never settles, hanging the whole probe
+    // with no timeout (observed on heavy modern pages from a throttled IP). Race it against a 4s
+    // cap so a stuck font can't stall the render — fonts are cosmetic to the screenshot anyway.
+    await page.evaluate(() => Promise.race([
+      document.fonts ? document.fonts.ready : Promise.resolve(),
+      new Promise(r => setTimeout(r, 4000)),
+    ])).catch(() => {});
     await page.waitForTimeout(2500);
     const m = await page.evaluate(() => {
       let rules = 0;
@@ -228,10 +235,34 @@ async function probe(page, ts) {
         total++;
         if (!el || el === document.body || el === document.documentElement) empty++;
       }
-      return { rules, broken, emptyRatio: empty / total };
+      // Unstyled detection: when the site's own layout stylesheet returns 200 but doesn't apply
+      // (throttled/partial archive of an @import or JS-injected CSS), the browser falls back to
+      // its defaults — serif body text + default-blue (rgb(0,0,238)) underlined links. Real
+      // marketing pages always override both. This signature catches the half-styled render that
+      // still fills the fold (so emptyRatio and cssFailed both miss it): giant unconstrained logo,
+      // bullet-list nav, Times body. See docs/CAPTURE_LEARNINGS.md.
+      const bf = getComputedStyle(document.body).fontFamily.toLowerCase().trim();
+      const serifDefault = bf === '' || bf.startsWith('times') || bf === 'serif';
+      let defLinks = 0, sampled = 0;
+      for (const a of Array.from(document.links).slice(0, 25)) {
+        const cs = getComputedStyle(a); sampled++;
+        if (cs.textDecorationLine.includes('underline') && cs.color === 'rgb(0, 0, 238)') defLinks++;
+      }
+      const unstyled = serifDefault || (sampled >= 4 && defLinks / sampled > 0.5);
+      return { rules, broken, emptyRatio: empty / total, unstyled };
     });
     if (m.rules < 10) throw new Error('unstyled (CSS not loaded)');
-    return { broken: m.broken, cssFailed, emptyRatio: m.emptyRatio, throttle503 };
+    // Blank/void detection: capture the render now and measure pixel spread. A near-uniform image
+    // (all-white void, or a page that reported "loaded" but painted nothing) has near-zero stdev
+    // on every channel. This catches the class emptyRatio misses — invisible/whitespace nodes
+    // still satisfy elementFromPoint, so a blank page can score emptyRatio=0 yet be all white.
+    // We screenshot here (once per probed candidate) so blankness feeds candidate selection, not
+    // just the final promote check; the buffer is reused by the caller as the saved shot.
+    const png = await page.screenshot({ timeout: 120000, animations: 'disabled' });
+    const stats = await sharp(png).stats();
+    const maxStdev = Math.max(...stats.channels.map(c => c.stdev));
+    const blank = maxStdev < 6;
+    return { broken: m.broken, cssFailed, emptyRatio: m.emptyRatio, throttle503, unstyled: m.unstyled, blank, png };
   } finally {
     page.off('response', onResp);
   }
@@ -241,9 +272,13 @@ async function probe(page, ts) {
 // far worse than a stray broken image, so they dominate; ties break on broken-image count.
 function scoreOf(q) {
   const collapsed = q.emptyRatio > EMPTY_MAX;
-  return q.cssFailed * 100 + (collapsed ? 1000 : 0) + q.broken;
+  // A blank render is the worst outcome (nothing usable); an unstyled render is next (content
+  // present but layout broken). Both must lose to any genuinely styled candidate, so they
+  // dominate the score above css/collapse/broken.
+  return (q.blank ? 3000 : 0) + (q.unstyled ? 1500 : 0)
+    + q.cssFailed * 100 + (collapsed ? 1000 : 0) + q.broken;
 }
-const isClean = q => q.cssFailed === 0 && q.emptyRatio <= EMPTY_MAX && q.broken === 0;
+const isClean = q => q.cssFailed === 0 && q.emptyRatio <= EMPTY_MAX && q.broken === 0 && !q.blank && !q.unstyled;
 
 const isThrottleErr = (msg) => /\b429\b|\b503\b|Too Many|Service Unavailable|No server is available|REFUSED_STREAM|Timeout|ERR_CONNECTION|ERR_NETWORK|ERR_ABORTED/i.test(msg || '');
 
@@ -319,7 +354,7 @@ const record = (entry) => manifestByDate.set(entry.date, entry);
 // progress. `shots` is scanned from disk (robust to SKIP_EXISTING / ONLY partial runs).
 async function writeSnapshots() {
   const files = (await readdir(`${OUT}shots`).catch(() => [])).filter(f => f.endsWith('.webp') && !f.startsWith('.tmp-'));
-  const shots = files.map(f => f.slice(0, -4)).sort();
+  const shots = files.map(f => f.replace(/\.webp$/, '')).sort();   // strip extension (not a fixed slice: ".webp" is 5 chars)
   const manifest = [...manifestByDate.values()].sort((a, b) => a.date.localeCompare(b.date));
   await writeFile(`${OUT}snapshots.json`, JSON.stringify({
     key: site.key, name: site.name, domain: site.domain, accent: site.accent, shots, manifest,
@@ -356,12 +391,12 @@ for (const p of selected) {
         if (q.throttle503 > 0) pickThrottled = true;
         const score = scoreOf(q), clean = isClean(q);
         if (!best || score < best.score) {
-          const png = await page.screenshot({ timeout: 120000, animations: 'disabled' });
-          await sharp(png).webp({ quality: WEBP_QUALITY }).toFile(tmpPath);
+          await sharp(q.png).webp({ quality: WEBP_QUALITY }).toFile(tmpPath);   // reuse probe's screenshot
           best = { ts, ...q, score, clean };
+          const flags = `${q.blank ? ' BLANK' : ''}${q.unstyled ? ' UNSTYLED' : ''}`;
           const tag = clean ? ' (clean)'
-            : ` (best so far: css=${q.cssFailed} empty=${q.emptyRatio.toFixed(2)} broken=${q.broken})`;
-          console.log(`  ${p.date} ts=${ts} css=${q.cssFailed} empty=${q.emptyRatio.toFixed(2)} broken=${q.broken}${tag}`);
+            : ` (best so far: css=${q.cssFailed} empty=${q.emptyRatio.toFixed(2)} broken=${q.broken}${flags})`;
+          console.log(`  ${p.date} ts=${ts} css=${q.cssFailed} empty=${q.emptyRatio.toFixed(2)} broken=${q.broken}${flags}${tag}`);
         }
         break; // styled render obtained for this candidate; move on (or stop if clean)
       } catch (e) {
@@ -386,10 +421,12 @@ for (const p of selected) {
     else await rm(tmpPath, { force: true }).catch(() => {});
     record({ date: p.date, quarter: p.quarter, ts: best.ts, alternate: best.ts !== p.ts,
       broken: best.broken, cssFailed: best.cssFailed, emptyRatio: +best.emptyRatio.toFixed(3),
+      blank: !!best.blank, unstyled: !!best.unstyled,
       clean: best.clean, ok: true, keptExisting: !promote });
     const verdict = best.clean ? 'ok  ' : (promote ? 'WARN' : 'KEEP');
+    const flags = `${best.blank ? ' BLANK' : ''}${best.unstyled ? ' UNSTYLED' : ''}`;
     const note = best.clean ? '' : promote ? ' <- no clean candidate (saved best)' : ' <- no clean candidate, kept existing shot';
-    console.log(`${verdict} ${p.date} css=${best.cssFailed} empty=${best.emptyRatio.toFixed(2)} broken=${best.broken}${best.ts !== p.ts ? ` (alt ${best.ts})` : ''}${note}`);
+    console.log(`${verdict} ${p.date} css=${best.cssFailed} empty=${best.emptyRatio.toFixed(2)} broken=${best.broken}${flags}${best.ts !== p.ts ? ` (alt ${best.ts})` : ''}${note}`);
   } else {
     await rm(tmpPath, { force: true }).catch(() => {});
     record({ date: p.date, quarter: p.quarter, ts: p.ts, ok: preExisted, keptExisting: preExisted });

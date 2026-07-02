@@ -15,6 +15,14 @@
       "accent": "#635bff",
       "since": "2011-10-07",
       "note": "Payments infrastructure. Anchored at the company's public launch — earlier stripe.com captures (1996–2010) belong to a previous domain owner."
+    },
+    {
+      "key": "easypost",
+      "name": "EasyPost",
+      "domain": "easypost.com",
+      "accent": "#4721fb",
+      "since": "2013",
+      "note": "Shipping API for logistics. Anchored at the shipping company's era — earlier easypost.com captures (1998–2000) belong to a previous domain owner; the modern site begins April 2013 (founded 2012, YC S13)."
     }
   ]
 }
