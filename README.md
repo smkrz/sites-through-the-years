@@ -29,6 +29,9 @@ sites/<key>/
 The grid reads `sites.json`, then each site's `snapshots.json`. The viewer fetches a
 single site's `snapshots.json` at runtime, so adding snapshots needs no HTML edits.
 
+> **Building on this / debugging captures?** Read [`docs/CAPTURE_LEARNINGS.md`](docs/CAPTURE_LEARNINGS.md) first —
+> hard-won lessons on Wayback rate-limiting, adaptive pacing, and the capture architecture.
+
 ## Adding / extending a site
 
 1. Add an entry to `sites.json` (`key`, `name`, `domain`, `accent`, optional `since` floor
