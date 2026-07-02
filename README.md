@@ -1,29 +1,92 @@
-# goshippo.com through the years
+# Website history — through the years
 
-An interactive viewer of goshippo.com's homepage as captured by the Internet Archive
-Wayback Machine, one representative snapshot per quarter from 2013-09-27 to 2026-04-02.
+Interactive viewers of company homepages as captured by the Internet Archive
+Wayback Machine — one representative snapshot per quarter, from each site's earliest
+meaningful capture to today.
 
-Open `index.html` (or the GitHub Pages URL). Use ← / → to step, the scrubber to jump
-to a year, and **Play** for a timelapse.
+Open `index.html` (or the GitHub Pages URL) for the grid of supported sites; each card's
+cover is that site's most recent snapshot. Click into a site for the timeline viewer:
+← / → to step, the scrubber to jump to a year, and **Play** for a timelapse.
 
-## Regenerating / extending
+Currently tracked:
 
-`capture.mjs` is the tool that builds the screenshot set:
+- **goshippo.com** — from 2013-09-27
+- **stripe.com** — from 2011-10-07 (Stripe the company's public launch; earlier
+  `stripe.com` captures from 1996–2010 belong to a previous domain owner and are excluded)
 
-- Queries the Wayback **CDX API** for all 200-status homepage captures.
+## Structure
+
+```
+sites.json                 registry of tracked sites (key, name, domain, accent, since)
+index.html                 grid landing page (cover = each site's latest snapshot)
+viewer.html                per-site timeline viewer — reads ?site=<key>
+capture.mjs                the capture tool, parameterized by SITE
+sites/<key>/
+  snapshots.json           site metadata + chronological list of rendered dates
+  shots/<YYYY-MM-DD>.png   the screenshots
+```
+
+The grid reads `sites.json`, then each site's `snapshots.json`. The viewer fetches a
+single site's `snapshots.json` at runtime, so adding snapshots needs no HTML edits.
+
+## Adding / extending a site
+
+1. Add an entry to `sites.json` (`key`, `name`, `domain`, `accent`, optional `since` floor
+   to skip a domain's earlier unrelated owner, optional `note`).
+2. Run the capture for that site.
+
+`capture.mjs`:
+
+- Queries the Wayback **CDX API** for all 200-status homepage captures (from the `since`
+  floor onward — it auto-discovers the earliest capture within that range).
 - Picks one representative capture per quarter (dedupes identical content digests).
 - Renders each above-the-fold in headless Chromium (Playwright), via the `if_`
   modifier so there's no Wayback toolbar.
 - Validates each render: rejects archive 503 pages and unstyled (CSS-failed) loads,
   and scores by broken-image count — keeping the cleanest capture, trying alternate
   snapshots in the same quarter when the primary is degraded.
+- Writes `sites/<key>/shots/*.png` and `sites/<key>/snapshots.json`.
 
 ```bash
 npm install
 npx playwright install chromium
-node capture.mjs                 # full run -> above-the-fold/
-ONLY=2024-01-04 node capture.mjs # re-fix specific dates
-node build-site.mjs              # assemble site/ (this folder)
+
+SITE=goshippo node capture.mjs           # full run for a site
+SITE=stripe node capture.mjs             # add another
+SITE=stripe GOVERN=1 node capture.mjs    # gentler on the Wayback LB (meters request bursts)
+SITE=stripe ONLY=2020-01-04 node capture.mjs   # re-fix specific dates
 ```
 
-Source: <https://web.archive.org/web/*/goshippo.com>
+### Resuming & fixing bad renders
+
+Captures survive interruption: `snapshots.json` is written after every pick, and shots are
+kept on disk. To resume or repair without re-doing good work:
+
+```bash
+SITE=stripe SKIP_EXISTING=1 node capture.mjs                 # keep every existing shot, fill gaps
+SITE=stripe SKIP_EXISTING=1 REFETCH=2018-04-01,2019-07-01 \  # + re-try specific degraded dates
+  node capture.mjs
+```
+
+Re-fetches are **no-degrade**: a candidate is rendered to a temp file and only replaces an
+existing shot if it's genuinely clean, so a throttled re-try can improve or keep a capture but
+never make it worse (verdicts: `ok` clean · `WARN` saved best, no prior shot · `KEEP` kept the
+existing shot · `skip` untouched).
+
+### Throttling & IP rotation
+
+The Internet Archive rate-limits **per source IP** with an *escalating* penalty — grinding
+through 503s graduates to a hard ~1-hour ban. The capturer detects sustained throttling (a broad
+run of picks hitting 503/429, distinct from one archive-degraded date) and **proactively pauses
+on an escalating ladder** (5 → 15 → 30 → 60 min) rather than hammering or quitting. It never
+exits — it can idle for hours/days and resumes the moment the archive is reachable — and while
+paused it prints an **IP-rotation recommendation**: switching your VPN/IP resets the per-IP limit
+instantly and the run continues on the new address. Residential exits beat datacenter/VPN-farm
+ones (IA pre-blocks some ranges).
+
+Useful env knobs: `LIMIT` (cap picks), `ONLY` (comma-separated dates), `DEADLINE` (ms
+wall-clock budget), `GOTO` (per-nav timeout), `MAX_CONC` / `REQ_SPACING_MS` (request governor),
+`EMPTY_MAX` (layout-collapse threshold), `THROTTLE_NUDGE` / `THROTTLE_COOLDOWNS` (throttle
+governor: consecutive throttled picks before pausing, and the cooldown ladder in seconds).
+
+Source: <https://web.archive.org/>

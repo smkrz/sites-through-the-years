@@ -1,0 +1,271 @@
+{
+  "key": "stripe",
+  "name": "Stripe",
+  "domain": "stripe.com",
+  "accent": "#635bff",
+  "shots": [
+    "2011-10-07",
+    "2012-02-21",
+    "2012-04-25",
+    "2012-07-14",
+    "2012-10-11",
+    "2013-01-04",
+    "2013-04-02",
+    "2013-07-02",
+    "2013-10-03",
+    "2014-01-02",
+    "2014-04-04",
+    "2014-07-01",
+    "2014-10-02",
+    "2015-01-06",
+    "2015-04-01",
+    "2015-07-01",
+    "2015-10-04",
+    "2016-01-01",
+    "2016-04-01",
+    "2016-07-01",
+    "2016-10-01",
+    "2017-01-01",
+    "2017-04-01",
+    "2017-07-01",
+    "2017-10-01",
+    "2018-01-01",
+    "2018-04-01",
+    "2018-07-01",
+    "2018-10-01",
+    "2019-01-01",
+    "2019-04-01",
+    "2019-07-01",
+    "2019-10-01",
+    "2020-01-01",
+    "2020-04-01",
+    "2020-07-01",
+    "2020-10-01",
+    "2021-01-01",
+    "2021-04-01",
+    "2021-07-01",
+    "2021-10-01",
+    "2022-01-01"
+  ],
+  "manifest": [
+    {
+      "date": "2011-10-07",
+      "quarter": "2011-Q4",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2012-02-21",
+      "quarter": "2012-Q1",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2012-04-25",
+      "quarter": "2012-Q2",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2012-07-14",
+      "quarter": "2012-Q3",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2012-10-11",
+      "quarter": "2012-Q4",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2013-01-04",
+      "quarter": "2013-Q1",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2013-04-02",
+      "quarter": "2013-Q2",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2013-07-02",
+      "quarter": "2013-Q3",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2013-10-03",
+      "quarter": "2013-Q4",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2014-01-02",
+      "quarter": "2014-Q1",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2014-04-04",
+      "quarter": "2014-Q2",
+      "ts": "20140424195916",
+      "alternate": true,
+      "broken": 9,
+      "cssFailed": 3,
+      "emptyRatio": 0,
+      "clean": false,
+      "ok": true,
+      "keptExisting": true
+    },
+    {
+      "date": "2014-07-01",
+      "quarter": "2014-Q3",
+      "ts": "20140716134919",
+      "alternate": true,
+      "broken": 5,
+      "cssFailed": 0,
+      "emptyRatio": 0,
+      "clean": false,
+      "ok": true,
+      "keptExisting": true
+    },
+    {
+      "date": "2014-10-02",
+      "quarter": "2014-Q4",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2015-01-06",
+      "quarter": "2015-Q1",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2015-04-01",
+      "quarter": "2015-Q2",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2015-07-01",
+      "quarter": "2015-Q3",
+      "ts": "20150703115754",
+      "alternate": true,
+      "broken": 0,
+      "cssFailed": 0,
+      "emptyRatio": 0,
+      "clean": true,
+      "ok": true
+    },
+    {
+      "date": "2015-10-04",
+      "quarter": "2015-Q4",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2016-01-01",
+      "quarter": "2016-Q1",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2016-04-01",
+      "quarter": "2016-Q2",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2016-07-01",
+      "quarter": "2016-Q3",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2016-10-01",
+      "quarter": "2016-Q4",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2017-01-01",
+      "quarter": "2017-Q1",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2017-04-01",
+      "quarter": "2017-Q2",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2017-07-01",
+      "quarter": "2017-Q3",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2017-10-01",
+      "quarter": "2017-Q4",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2018-01-01",
+      "quarter": "2018-Q1",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2018-04-01",
+      "quarter": "2018-Q2",
+      "ts": "20180401005828",
+      "alternate": true,
+      "broken": 1,
+      "cssFailed": 2,
+      "emptyRatio": 0,
+      "clean": false,
+      "ok": true
+    },
+    {
+      "date": "2018-07-01",
+      "quarter": "2018-Q3",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2018-10-01",
+      "quarter": "2018-Q4",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2019-01-01",
+      "quarter": "2019-Q1",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2019-04-01",
+      "quarter": "2019-Q2",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2019-07-01",
+      "quarter": "2019-Q3",
+      "ts": "20190701010719",
+      "alternate": true,
+      "broken": 4,
+      "cssFailed": 1,
+      "emptyRatio": 0,
+      "clean": false,
+      "ok": true
+    }
+  ]
+}
