@@ -45,7 +45,25 @@
     "2021-04-01",
     "2021-07-01",
     "2021-10-01",
-    "2022-01-01"
+    "2022-01-01",
+    "2022-04-01",
+    "2022-07-01",
+    "2022-10-01",
+    "2023-01-01",
+    "2023-04-01",
+    "2023-07-01",
+    "2023-10-01",
+    "2024-01-01",
+    "2024-04-01",
+    "2024-07-01",
+    "2024-10-01",
+    "2025-01-01",
+    "2025-04-01",
+    "2025-07-01",
+    "2025-10-01",
+    "2026-01-01",
+    "2026-04-01",
+    "2026-07-01"
   ],
   "manifest": [
     {
@@ -224,13 +242,14 @@
     {
       "date": "2018-04-01",
       "quarter": "2018-Q2",
-      "ts": "20180401005828",
+      "ts": "20180402000718",
       "alternate": true,
-      "broken": 1,
-      "cssFailed": 2,
+      "broken": 4,
+      "cssFailed": 6,
       "emptyRatio": 0,
       "clean": false,
-      "ok": true
+      "ok": true,
+      "keptExisting": true
     },
     {
       "date": "2018-07-01",
@@ -259,13 +278,314 @@
     {
       "date": "2019-07-01",
       "quarter": "2019-Q3",
-      "ts": "20190701010719",
+      "ts": "20190701071031",
       "alternate": true,
       "broken": 4,
+      "cssFailed": 4,
+      "emptyRatio": 0,
+      "clean": false,
+      "ok": true,
+      "keptExisting": true
+    },
+    {
+      "date": "2019-10-01",
+      "quarter": "2019-Q4",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2020-01-01",
+      "quarter": "2020-Q1",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2020-04-01",
+      "quarter": "2020-Q2",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2020-07-01",
+      "quarter": "2020-Q3",
+      "ts": "20200701004113",
+      "alternate": true,
+      "broken": 10,
+      "cssFailed": 33,
+      "emptyRatio": 0,
+      "clean": false,
+      "ok": true,
+      "keptExisting": true
+    },
+    {
+      "date": "2020-10-01",
+      "quarter": "2020-Q4",
+      "ts": "20201002004645",
+      "alternate": true,
+      "broken": 13,
+      "cssFailed": 4,
+      "emptyRatio": 0,
+      "clean": false,
+      "ok": true,
+      "keptExisting": true
+    },
+    {
+      "date": "2021-01-01",
+      "quarter": "2021-Q1",
+      "ts": "20210103232849",
+      "alternate": true,
+      "broken": 5,
+      "cssFailed": 8,
+      "emptyRatio": 0,
+      "clean": false,
+      "ok": true,
+      "keptExisting": true
+    },
+    {
+      "date": "2021-04-01",
+      "quarter": "2021-Q2",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2021-07-01",
+      "quarter": "2021-Q3",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2021-10-01",
+      "quarter": "2021-Q4",
+      "ok": true,
+      "skipped": true
+    },
+    {
+      "date": "2022-01-01",
+      "quarter": "2022-Q1",
+      "ts": "20220101105117",
+      "alternate": false,
+      "broken": 1,
+      "cssFailed": 3,
+      "emptyRatio": 0,
+      "clean": false,
+      "ok": true,
+      "keptExisting": true
+    },
+    {
+      "date": "2022-04-01",
+      "quarter": "2022-Q2",
+      "ts": "20220401223340",
+      "alternate": true,
+      "broken": 1,
+      "cssFailed": 8,
+      "emptyRatio": 0,
+      "clean": false,
+      "ok": true,
+      "keptExisting": false
+    },
+    {
+      "date": "2022-07-01",
+      "quarter": "2022-Q3",
+      "ts": "20220701132157",
+      "alternate": true,
+      "broken": 3,
+      "cssFailed": 4,
+      "emptyRatio": 0,
+      "clean": false,
+      "ok": true,
+      "keptExisting": false
+    },
+    {
+      "date": "2022-10-01",
+      "quarter": "2022-Q4",
+      "ts": "20221003094011",
+      "alternate": true,
+      "broken": 2,
+      "cssFailed": 4,
+      "emptyRatio": 0,
+      "clean": false,
+      "ok": true,
+      "keptExisting": false
+    },
+    {
+      "date": "2023-01-01",
+      "quarter": "2023-Q1",
+      "ts": "20230102220630",
+      "alternate": true,
+      "broken": 2,
+      "cssFailed": 17,
+      "emptyRatio": 0,
+      "clean": false,
+      "ok": true,
+      "keptExisting": false
+    },
+    {
+      "date": "2023-04-01",
+      "quarter": "2023-Q2",
+      "ts": "20230401001025",
+      "alternate": false,
+      "broken": 1,
+      "cssFailed": 11,
+      "emptyRatio": 0,
+      "clean": false,
+      "ok": true,
+      "keptExisting": false
+    },
+    {
+      "date": "2023-07-01",
+      "quarter": "2023-Q3",
+      "ts": "20230701124408",
+      "alternate": true,
+      "broken": 5,
+      "cssFailed": 0,
+      "emptyRatio": 0,
+      "clean": false,
+      "ok": true,
+      "keptExisting": false
+    },
+    {
+      "date": "2023-10-01",
+      "quarter": "2023-Q4",
+      "ts": "20231001081608",
+      "alternate": true,
+      "broken": 0,
+      "cssFailed": 0,
+      "emptyRatio": 0,
+      "clean": true,
+      "ok": true,
+      "keptExisting": false
+    },
+    {
+      "date": "2024-01-01",
+      "quarter": "2024-Q1",
+      "ts": "20240101032610",
+      "alternate": true,
+      "broken": 0,
       "cssFailed": 1,
       "emptyRatio": 0,
       "clean": false,
-      "ok": true
+      "ok": true,
+      "keptExisting": false
+    },
+    {
+      "date": "2024-04-01",
+      "quarter": "2024-Q2",
+      "ts": "20240401024002",
+      "alternate": true,
+      "broken": 0,
+      "cssFailed": 0,
+      "emptyRatio": 0,
+      "clean": true,
+      "ok": true,
+      "keptExisting": false
+    },
+    {
+      "date": "2024-07-01",
+      "quarter": "2024-Q3",
+      "ts": "20240701001936",
+      "alternate": false,
+      "broken": 0,
+      "cssFailed": 0,
+      "emptyRatio": 0,
+      "clean": true,
+      "ok": true,
+      "keptExisting": false
+    },
+    {
+      "date": "2024-10-01",
+      "quarter": "2024-Q4",
+      "ts": "20241001002949",
+      "alternate": true,
+      "broken": 0,
+      "cssFailed": 0,
+      "emptyRatio": 0,
+      "clean": true,
+      "ok": true,
+      "keptExisting": false
+    },
+    {
+      "date": "2025-01-01",
+      "quarter": "2025-Q1",
+      "ts": "20250101015013",
+      "alternate": false,
+      "broken": 0,
+      "cssFailed": 0,
+      "emptyRatio": 0,
+      "clean": true,
+      "ok": true,
+      "keptExisting": false
+    },
+    {
+      "date": "2025-04-01",
+      "quarter": "2025-Q2",
+      "ts": "20250401020458",
+      "alternate": false,
+      "broken": 0,
+      "cssFailed": 0,
+      "emptyRatio": 0,
+      "clean": true,
+      "ok": true,
+      "keptExisting": false
+    },
+    {
+      "date": "2025-07-01",
+      "quarter": "2025-Q3",
+      "ts": "20250701153543",
+      "alternate": false,
+      "broken": 0,
+      "cssFailed": 0,
+      "emptyRatio": 0,
+      "clean": true,
+      "ok": true,
+      "keptExisting": false
+    },
+    {
+      "date": "2025-10-01",
+      "quarter": "2025-Q4",
+      "ts": "20251001173755",
+      "alternate": true,
+      "broken": 0,
+      "cssFailed": 0,
+      "emptyRatio": 0,
+      "clean": true,
+      "ok": true,
+      "keptExisting": false
+    },
+    {
+      "date": "2026-01-01",
+      "quarter": "2026-Q1",
+      "ts": "20260101050421",
+      "alternate": false,
+      "broken": 0,
+      "cssFailed": 0,
+      "emptyRatio": 0,
+      "clean": true,
+      "ok": true,
+      "keptExisting": false
+    },
+    {
+      "date": "2026-04-01",
+      "quarter": "2026-Q2",
+      "ts": "20260401081527",
+      "alternate": true,
+      "broken": 0,
+      "cssFailed": 0,
+      "emptyRatio": 0,
+      "clean": true,
+      "ok": true,
+      "keptExisting": false
+    },
+    {
+      "date": "2026-07-01",
+      "quarter": "2026-Q3",
+      "ts": "20260701154613",
+      "alternate": true,
+      "broken": 0,
+      "cssFailed": 0,
+      "emptyRatio": 0,
+      "clean": true,
+      "ok": true,
+      "keptExisting": false
     }
   ]
 }
