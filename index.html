@@ -61,7 +61,7 @@ function card(site, data){
   a.href = 'viewer.html?site=' + encodeURIComponent(site.key);
   a.style.setProperty('--card-accent', accent);
   const cover = latest
-    ? '<div class="cover"><img loading="lazy" src="sites/'+site.key+'/shots/'+latest+'.png" alt="'+site.domain+' latest homepage">'
+    ? '<div class="cover"><img loading="lazy" src="sites/'+site.key+'/shots/'+latest+'.webp" alt="'+site.domain+' latest homepage">'
       + '<span class="pill">'+shots.length+' snapshots</span></div>'
     : '<div class="cover"><div class="skeleton">no snapshots yet</div></div>';
   a.innerHTML = cover +

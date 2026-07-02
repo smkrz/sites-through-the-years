@@ -8,6 +8,7 @@
     "capture": "node capture.mjs"
   },
   "dependencies": {
-    "playwright": "^1.61.1"
+    "playwright": "^1.61.1",
+    "sharp": "^0.35.3"
   }
 }

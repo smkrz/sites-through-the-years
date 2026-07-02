@@ -23,7 +23,7 @@ viewer.html                per-site timeline viewer — reads ?site=<key>
 capture.mjs                the capture tool, parameterized by SITE
 sites/<key>/
   snapshots.json           site metadata + chronological list of rendered dates
-  shots/<YYYY-MM-DD>.png   the screenshots
+  shots/<YYYY-MM-DD>.webp   the screenshots
 ```
 
 The grid reads `sites.json`, then each site's `snapshots.json`. The viewer fetches a
@@ -48,7 +48,7 @@ single site's `snapshots.json` at runtime, so adding snapshots needs no HTML edi
 - Validates each render: rejects archive 503 pages and unstyled (CSS-failed) loads,
   and scores by broken-image count — keeping the cleanest capture, trying alternate
   snapshots in the same quarter when the primary is degraded.
-- Writes `sites/<key>/shots/*.png` and `sites/<key>/snapshots.json`.
+- Writes `sites/<key>/shots/*.webp` and `sites/<key>/snapshots.json`.
 
 ```bash
 npm install

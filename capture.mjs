@@ -1,6 +1,10 @@
 import { chromium } from 'playwright';
 import { mkdir, writeFile, readFile, readdir, rename, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import sharp from 'sharp';
+
+// Shots are stored as WebP (visually lossless at q92, ~6x smaller than PNG -> fast deploys/loads).
+const WEBP_QUALITY = process.env.WEBP_QUALITY ? parseInt(process.env.WEBP_QUALITY, 10) : 92;
 
 const ROOT = new URL('./', import.meta.url).pathname;
 
@@ -263,7 +267,7 @@ const throttle = {
 };
 
 async function shotCount() {
-  return (await readdir(`${OUT}shots`).catch(() => [])).filter(f => f.endsWith('.png') && !f.startsWith('.tmp-')).length;
+  return (await readdir(`${OUT}shots`).catch(() => [])).filter(f => f.endsWith('.webp') && !f.startsWith('.tmp-')).length;
 }
 
 // Cheap liveness check: a single CDX request. 200 => archive reachable (throttle likely cleared).
@@ -314,7 +318,7 @@ const record = (entry) => manifestByDate.set(entry.date, entry);
 // snapshots.json is the viewer/grid feed; write it after every pick so a kill can't wipe
 // progress. `shots` is scanned from disk (robust to SKIP_EXISTING / ONLY partial runs).
 async function writeSnapshots() {
-  const files = (await readdir(`${OUT}shots`).catch(() => [])).filter(f => f.endsWith('.png') && !f.startsWith('.tmp-'));
+  const files = (await readdir(`${OUT}shots`).catch(() => [])).filter(f => f.endsWith('.webp') && !f.startsWith('.tmp-'));
   const shots = files.map(f => f.slice(0, -4)).sort();
   const manifest = [...manifestByDate.values()].sort((a, b) => a.date.localeCompare(b.date));
   await writeFile(`${OUT}snapshots.json`, JSON.stringify({
@@ -326,7 +330,7 @@ async function writeSnapshots() {
 for (const p of selected) {
   if (Date.now() > DEADLINE) { console.log(`deadline reached, stopping before ${p.date}`); break; }
   // resume: keep an existing shot unless it's explicitly queued for re-fetch
-  if (SKIP_EXISTING && !REFETCH.has(p.date) && existsSync(`${OUT}shots/${p.date}.png`)) {
+  if (SKIP_EXISTING && !REFETCH.has(p.date) && existsSync(`${OUT}shots/${p.date}.webp`)) {
     if (!manifestByDate.has(p.date)) record({ date: p.date, quarter: p.quarter, ok: true, skipped: true });
     console.log(`skip ${p.date} (existing)`);
     continue;
@@ -335,8 +339,8 @@ for (const p of selected) {
   // No-degrade: render candidates to a temp file; only replace an existing shot if the new
   // best is actually clean. Under throttling a re-fetch can come back worse than what's on
   // disk — so a re-fetch may improve or keep, but never degrade a pre-existing capture.
-  const finalPath = `${OUT}shots/${p.date}.png`;
-  const tmpPath = `${OUT}shots/.tmp-${p.date}.png`;
+  const finalPath = `${OUT}shots/${p.date}.webp`;
+  const tmpPath = `${OUT}shots/.tmp-${p.date}.webp`;
   const preExisted = existsSync(finalPath);
   const candidates = await quarterCandidates(p);
   let best = null;   // {ts, broken, cssFailed, emptyRatio, score, clean}
@@ -352,7 +356,8 @@ for (const p of selected) {
         if (q.throttle503 > 0) pickThrottled = true;
         const score = scoreOf(q), clean = isClean(q);
         if (!best || score < best.score) {
-          await page.screenshot({ path: tmpPath, timeout: 120000, animations: 'disabled' });
+          const png = await page.screenshot({ timeout: 120000, animations: 'disabled' });
+          await sharp(png).webp({ quality: WEBP_QUALITY }).toFile(tmpPath);
           best = { ts, ...q, score, clean };
           const tag = clean ? ' (clean)'
             : ` (best so far: css=${q.cssFailed} empty=${q.emptyRatio.toFixed(2)} broken=${q.broken})`;

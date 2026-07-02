@@ -116,14 +116,14 @@ const sourceEl = document.getElementById('source');
 
 let i = 0, timer = null;
 
-function preload(n){ if(n>=0 && n<SHOTS.length){ const im=new Image(); im.src=BASE+'shots/'+SHOTS[n]+'.png'; } }
+function preload(n){ if(n>=0 && n<SHOTS.length){ const im=new Image(); im.src=BASE+'shots/'+SHOTS[n]+'.webp'; } }
 
 function show(n){
   i = Math.max(0, Math.min(SHOTS.length-1, n));
   const d = SHOTS[i];
   const [y,m,day] = d.split('-');
   const q = Math.floor((parseInt(m)-1)/3)+1;
-  img.src = BASE+'shots/'+d+'.png';
+  img.src = BASE+'shots/'+d+'.webp';
   img.alt = DOMAIN+' homepage on '+d;
   yearEl.textContent = y;
   dateEl.textContent = 'Q'+q+' · '+MONTHS[parseInt(m)-1]+' '+parseInt(day)+', '+y;

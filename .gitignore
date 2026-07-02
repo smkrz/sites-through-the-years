@@ -1,4 +1,4 @@
 node_modules/
-.tmp-*.png
+.tmp-*
 .DS_Store
 capture-*.log
