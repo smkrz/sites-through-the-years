@@ -100,12 +100,8 @@ async function quarterCandidates(p) {
   return [...new Set([p.ts, ...cands.filter(ts => ts !== p.ts)])].slice(0, 6);
 }
 
-const browser = await chromium.launch();
-const ctx = await browser.newContext({
-  viewport: { width: 1440, height: 900 },
-  deviceScaleFactor: 2,
-  userAgent: UA,
-});
+// browser + governed context are created below (after the rate controller they depend on),
+// via makeContext(), so the watchdog can recreate them if the browser process dies.
 
 // --- adaptive request controller (AIMD) ---------------------------------------------------
 // IA rate-limits per IP; a fixed concurrency either bursts (-> throttle) or crawls (-> slow).
@@ -156,15 +152,50 @@ const BLOCK = /google-analytics|googletagmanager|doubleclick|facebook\.|fbcdn|ho
 
 // Governor on by default (disable with GOVERN=0). Drops tracking noise and meters the START of
 // native requests under the adaptive controller — never replays them.
-if (process.env.GOVERN !== '0') {
-  await ctx.route('**/*', async (route) => {
-    const url = route.request().url();
-    if (BLOCK.test(url)) return route.abort().catch(() => {});
-    if (url.startsWith('data:') || url.startsWith('blob:')) return route.continue().catch(() => {});
-    await acquireSlot();
-    setTimeout(releaseSlot, 300);   // hold the slot briefly to space starts, then fetch natively
-    return route.continue().catch(() => {});
+async function makeContext() {
+  const c = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    deviceScaleFactor: 2,
+    userAgent: UA,
+    // Prefer US English: some sites localize by Accept-Language / navigator.language, so the
+    // archive captured German/other renders. This forces en-US where localization is client-side.
+    // (Server-rendered localized captures can't be changed — those need an English alternate ts.)
+    locale: 'en-US',
+    extraHTTPHeaders: { 'Accept-Language': 'en-US,en;q=0.9' },
   });
+  if (process.env.GOVERN !== '0') {
+    await c.route('**/*', async (route) => {
+      const url = route.request().url();
+      if (BLOCK.test(url)) return route.abort().catch(() => {});
+      if (url.startsWith('data:') || url.startsWith('blob:')) return route.continue().catch(() => {});
+      await acquireSlot();
+      setTimeout(releaseSlot, 300);   // hold the slot briefly to space starts, then fetch natively
+      return route.continue().catch(() => {});
+    });
+  }
+  return c;
+}
+
+let browser = await chromium.launch();
+let ctx = await makeContext();
+
+// --- render watchdog ----------------------------------------------------------------------
+// A single candidate render must never hang forever. If the browser process dies (observed after
+// the machine sleeps, and under sustained archive throttling) a page op can wait on a dead CDP
+// connection at 0% CPU with no timeout of its own — the supervisor can't catch it because the
+// process never exits. So we (a) hard-cap each attempt with a timeout and (b) relaunch the browser
+// when it's disconnected, letting the run self-heal to the next candidate/pick instead of wedging.
+const PICK_TIMEOUT = process.env.PICK_TIMEOUT ? parseInt(process.env.PICK_TIMEOUT, 10) : 240000; // per-candidate hard cap
+const withTimeout = (promise, ms, label) => Promise.race([
+  promise,
+  new Promise((_, reject) => setTimeout(() => reject(new Error(`watchdog timeout: ${label}`)), ms)),
+]);
+async function ensureBrowser() {
+  if (browser.isConnected()) return;
+  console.log('[watchdog] browser disconnected — relaunching');
+  try { await browser.close(); } catch {}
+  browser = await chromium.launch();
+  ctx = await makeContext();
 }
 
 // Layout-collapse threshold: fraction of above-the-fold sample points that hit only the
@@ -386,10 +417,12 @@ for (const p of selected) {
   for (const ts of candidates) {
     if (best && best.clean) break;
     for (let attempt = 1; attempt <= 3; attempt++) {
-      const page = await ctx.newPage();
-      feedRate(page);   // feed responses to the adaptive rate controller
+      await ensureBrowser();   // recreate the browser if it died, so a dead session can't wedge us
+      let page;
       try {
-        const q = await probe(page, ts);
+        page = await withTimeout(ctx.newPage(), 30000, 'newPage');
+        feedRate(page);   // feed responses to the adaptive rate controller
+        const q = await withTimeout(probe(page, ts), PICK_TIMEOUT, `probe ${p.date} ts=${ts}`);
         throttle.note(q.throttle503 > 0);
         if (q.throttle503 > 0) pickThrottled = true;
         const score = scoreOf(q), clean = isClean(q);
@@ -413,7 +446,8 @@ for (const p of selected) {
         console.log(`  ${p.date} ts=${ts} try ${attempt}/3: ${e.message} -> ${Math.round(backoff / 1000)}s`);
         await sleep(backoff);
       } finally {
-        await page.close();
+        // page may be undefined (newPage timed out); close can itself hang on a dead browser
+        if (page) await withTimeout(page.close(), 10000, 'page.close').catch(() => {});
       }
     }
   }
