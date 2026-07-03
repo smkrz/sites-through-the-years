@@ -42,7 +42,10 @@ const jitter = ms => ms + Math.floor(Math.random() * Math.min(1000, ms * 0.25));
 async function cdxJson(url, attempts = 8) {
   for (let i = 1; i <= attempts; i++) {
     try {
-      const res = await fetch(url, { headers: { 'User-Agent': UA } });
+      // Node's fetch has NO default timeout: on a dead/half-open socket (e.g. after the machine
+      // sleeps or a network blip) the await hangs forever at 0% CPU, silently wedging the run.
+      // AbortSignal.timeout guarantees each attempt fails fast so the retry loop can recover.
+      const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(25000) });
       const text = await res.text();
       if (res.ok && text.trim().startsWith('[')) return JSON.parse(text);
       // On 429, IA bans the IP for 1h (doubling) if ignored >1min -> pause ~60s, don't hammer.
@@ -309,7 +312,7 @@ async function shotCount() {
 async function livenessOk() {
   try {
     const r = await fetch(`https://web.archive.org/cdx/search/cdx?url=${DOMAIN}&output=json&limit=1&fl=timestamp&filter=statuscode:200`,
-      { headers: { 'User-Agent': UA } });
+      { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(20000) });   // bounded: never hang on a dead socket
     return r.ok;
   } catch { return false; }
 }
